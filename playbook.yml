@@ -1,0 +1,45 @@
+---
+- name: Install Wireguard on RPi
+  hosts: all
+  become: True
+  tasks:
+    - name: Install rpi-source prerequisites
+      apt:
+        name: "{{ item }}"
+      with_items:
+        - bc
+        - libncurses5-dev
+
+    - name: Run rpi-source
+      get_url:
+        url: https://raw.githubusercontent.com/notro/rpi-source/master/rpi-source
+        dest: /tmp/rpi-source
+        mode: 0744
+
+    - name: Run rpi-source
+      shell: python /tmp/rpi-source --skip-gcc
+
+    - name: Install Wireguard build prerequisites
+      apt:
+        name: "{{ item }}" 
+      with_items:
+        - libmnl-dev
+        - build-essential
+        - git
+
+    - name: Clone WireGuard repo
+      git:
+        repo: https://git.zx2c4.com/WireGuard
+        dest: /tmp/WireGuard
+
+    - name: Build WireGuard
+      shell: make && make install
+      args:
+        chdir: /tmp/WireGuard/src
+
+    - name: Ensure ipv4 ipforwarding is enabled
+      command: sysctl -w net.ipv4.ip_forward=1
+    
+    - name: Ensure ipv6 ipforwarding is enabled
+      command: sysctl -w net.ipv6.conf.all.forwarding=1
+
